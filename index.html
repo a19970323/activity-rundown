@@ -146,7 +146,7 @@
                             <span v-if="pinnedStaff === staff" class="text-xs font-normal text-purple-200 bg-purple-800 px-2 py-1 rounded shadow-inner">已置頂</span>
                         </div>
                         
-                        <!-- 🖥️ 桌面版表格 (螢幕寬度 md 以上顯示) -->
+                        <!-- 🖥️ 桌面版表格 -->
                         <div class="hidden md:block overflow-x-auto">
                             <table class="w-full text-left border-collapse min-w-[800px]">
                                 <thead>
@@ -184,7 +184,7 @@
                             </table>
                         </div>
 
-                        <!-- 📱 手機版卡片排版 (螢幕寬度 md 以下顯示) -->
+                        <!-- 📱 手機版卡片排版 -->
                         <div class="block md:hidden bg-slate-50 p-3">
                             <div v-for="(task, idx) in getStaffTaskViews(staff)" :key="'mob'+idx" 
                                  :class="task.type === 'current' ? 'bg-yellow-50 border-yellow-400' : 'bg-white border-gray-300 opacity-90'"
@@ -227,11 +227,6 @@
     </div>
 
     <script>
-        // ==========================================
-        // 🔴 密碼設定區 🔴
-        const EVENT_PASSWORD = "27365925";
-        // ==========================================
-
         const { createApp } = Vue;
 
         function parseTimeStr(timeStr) {
@@ -249,6 +244,11 @@
         createApp({
             data() {
                 return {
+                    // ==========================================
+                    // 🔴 密碼在此設定 🔴
+                    targetPassword: '27365925', 
+                    // ==========================================
+
                     isAuthenticated: false,
                     passwordInput: '',
                     authError: false,
@@ -315,13 +315,21 @@
             },
             methods: {
                 login() {
-                    if (this.passwordInput.trim() === EVENT_PASSWORD) {
+                    // 自動去除頭尾空白，並將手機鍵盤可能打出的全形數字轉換為半形
+                    let inputPw = this.passwordInput.trim()
+                        .replace(/０/g, '0').replace(/１/g, '1')
+                        .replace(/２/g, '2').replace(/３/g, '3')
+                        .replace(/４/g, '4').replace(/５/g, '5')
+                        .replace(/６/g, '6').replace(/７/g, '7')
+                        .replace(/８/g, '8').replace(/９/g, '9');
+
+                    if (inputPw === this.targetPassword) {
                         this.isAuthenticated = true;
                         this.authError = false;
                         this.loadData(); 
                     } else {
                         this.authError = true;
-                        this.passwordInput = '';
+                        this.passwordInput = ''; // 密碼錯誤時自動清空欄位
                     }
                 },
                 updateTime() {
@@ -408,7 +416,7 @@
                                 if(start1 !== -1) break;
                             }
                             if(start1 !== -1) {
-                                let lastTime1 = ''; // 記憶時間，解決合併儲存格
+                                let lastTime1 = ''; 
                                 for(let i = start1 + 1; i < json1.length; i++) {
                                     let r = json1[i];
                                     if(!r) continue;
@@ -429,13 +437,12 @@
                             }
                         }
 
-                        // 修改：加入時間記憶邏輯
                         const sheet2 = workbook.Sheets['rundown-活動日1021'];
                         if (sheet2) {
                             const json2 = XLSX.utils.sheet_to_json(sheet2, { header: 1, defval: '' });
                             let start2 = json2.findIndex(r => r && r.length > 0 && String(r[0]).includes('時間'));
                             if(start2 !== -1) {
-                                let lastTime2 = ''; // 記憶時間，解決合併儲存格
+                                let lastTime2 = ''; 
                                 for(let i = start2 + 1; i < json2.length; i++) {
                                     let r = json2[i];
                                     if(!r) continue;
@@ -444,4 +451,41 @@
                                     if(rawTime !== '') lastTime2 = rawTime;
                                     if(lastTime2 === '') continue;
                                     
-                                    let area = String(r[2]||'').
+                                    let area = String(r[2]||'').trim();
+                                    let task = String(r[3]||'').trim();
+                                    let momo = String(r[4]||'').trim();
+                                    let note = String(r[6]||'').trim();
+
+                                    if(task === '' && momo === '') continue;
+
+                                    ['Jill', 'Dawn', '周瑾', 'Maggie'].forEach(name => {
+                                        if(momo.includes(name) || momo.includes('All')) {
+                                            this.staffTasks[name].push({ time: lastTime2, area, task, note });
+                                        }
+                                    });
+                                }
+                            }
+                        }
+
+                        Object.keys(this.staffTasks).forEach(k => {
+                            this.staffTasks[k].sort((a, b) => {
+                                let pa = parseTimeStr(a.time);
+                                let pb = parseTimeStr(b.time);
+                                return (pa ? pa.start : 0) - (pb ? pb.start : 0);
+                            });
+                        });
+                        
+                        this.isLoaded = true;
+
+                    } catch (err) {
+                        console.error(err);
+                        this.errorMsg = '⚠ ' + err.message;
+                        this.isLoaded = true;
+                    }
+                }
+            },
+            mounted() {}
+        }).mount('#app');
+    </script>
+</body>
+</html>
