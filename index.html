@@ -21,18 +21,27 @@
 <body class="bg-slate-100 text-gray-800 font-sans">
     <div id="app">
         
-        <!-- 1. 密碼保護門 -->
+        <!-- 1. 密碼保護門 (改為標準 form 表單以攔截異常提交) -->
         <div v-if="!isAuthenticated" class="min-h-screen flex items-center justify-center bg-slate-800 p-4">
-            <div class="bg-white p-8 rounded-xl shadow-2xl max-w-sm w-full text-center">
+            <form @submit.prevent="login" class="bg-white p-8 rounded-xl shadow-2xl max-w-sm w-full text-center">
                 <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <span class="text-3xl">🔒</span>
                 </div>
                 <h2 class="text-2xl font-bold text-gray-800 mb-2">專案存取加密</h2>
                 <p class="text-sm text-gray-500 mb-6">請輸入活動專屬密碼以檢視行程表</p>
-                <input type="password" v-model="passwordInput" @keyup.enter="login" placeholder="請輸入密碼..." class="w-full border border-gray-300 px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4 text-center tracking-widest text-lg font-bold text-blue-700">
-                <button @click="login" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition duration-200 shadow-md">解鎖進入</button>
+                
+                <!-- 加入 autocomplete="new-password" 阻擋瀏覽器自動填寫，加入 inputmode="numeric" 喚起手機數字鍵盤 -->
+                <input type="password" 
+                       ref="pwInput"
+                       v-model="passwordInput" 
+                       autocomplete="new-password"
+                       inputmode="numeric"
+                       placeholder="請輸入密碼..." 
+                       class="w-full border border-gray-300 px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4 text-center tracking-widest text-lg font-bold text-blue-700">
+                
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition duration-200 shadow-md">解鎖進入</button>
                 <p v-if="authError" class="text-red-500 text-sm mt-3 font-bold animate-pulse">❌ 密碼錯誤，請重新輸入</p>
-            </div>
+            </form>
         </div>
 
         <!-- 2. 載入中畫面 -->
@@ -175,7 +184,6 @@
                                         
                                         <td class="p-3 text-sm font-semibold text-slate-700">{{ task.area }}</td>
                                         <td class="p-3 text-sm whitespace-pre-wrap text-slate-800 leading-relaxed">
-                                            <!-- 新增：個人專屬任務標籤 -->
                                             <div v-if="task.specificRole" class="mb-2 inline-block bg-purple-100 text-purple-800 text-[13px] font-bold px-2 py-1 rounded shadow-sm">
                                                 🎯 {{ task.specificRole }}
                                             </div>
@@ -211,7 +219,6 @@
                                  
                                  <div class="mb-3">
                                      <div class="text-xs font-bold text-gray-400 mb-2">工作項目</div>
-                                     <!-- 新增：個人專屬任務標籤 -->
                                      <div v-if="task.specificRole" class="mb-2 inline-block bg-purple-100 text-purple-800 text-[13px] font-bold px-2 py-1 rounded shadow-sm">
                                          🎯 {{ task.specificRole }}
                                      </div>
@@ -237,11 +244,6 @@
     </div>
 
     <script>
-        // ==========================================
-        // 🔴 密碼在此設定 🔴
-        const EVENT_PASSWORD = "27365925";
-        // ==========================================
-
         const { createApp } = Vue;
 
         function parseTimeStr(timeStr) {
@@ -259,6 +261,11 @@
         createApp({
             data() {
                 return {
+                    // ==========================================
+                    // 🔴 密碼唯一判定標準 🔴
+                    targetPassword: '27365925', 
+                    // ==========================================
+
                     isAuthenticated: false,
                     passwordInput: '',
                     authError: false,
@@ -325,20 +332,24 @@
             },
             methods: {
                 login() {
-                    let inputPw = this.passwordInput.trim()
+                    // 全形半形轉換與空白修剪，確保比對準確度
+                    let inputPw = String(this.passwordInput).trim()
                         .replace(/０/g, '0').replace(/１/g, '1')
                         .replace(/２/g, '2').replace(/３/g, '3')
                         .replace(/４/g, '4').replace(/５/g, '5')
                         .replace(/６/g, '6').replace(/７/g, '7')
                         .replace(/８/g, '8').replace(/９/g, '9');
 
-                    if (inputPw === EVENT_PASSWORD) {
+                    if (inputPw === this.targetPassword) {
                         this.isAuthenticated = true;
                         this.authError = false;
                         this.loadData(); 
                     } else {
                         this.authError = true;
-                        this.passwordInput = ''; 
+                        // 若輸入錯誤，選取目前文字以便直接覆蓋重打，避免被瀏覽器干擾
+                        if(this.$refs.pwInput) {
+                            this.$refs.pwInput.select();
+                        }
                     }
                 },
                 updateTime() {
@@ -470,10 +481,46 @@
                                     ['Jill', 'Dawn', '周瑾', 'Maggie'].forEach(name => {
                                         if(momo.includes(name) || momo.includes('All')) {
                                             
-                                            // 萃取個人專屬任務文字
                                             let specificRole = '';
                                             if (momo.includes('All')) {
                                                 specificRole = '全體協同執行';
                                             } else {
                                                 let lines = momo.split('\n');
                                                 for (let line of lines) {
+                                                    if (line.includes(name)) {
+                                                        specificRole = line.replace(new RegExp(`${name}\\s*[：:]\\s*`), '').trim();
+                                                        if (specificRole === name) specificRole = '主要負責人'; 
+                                                        break;
+                                                    }
+                                                }
+                                            }
+
+                                            this.staffTasks[name].push({ time: lastTime2, area, task, note, specificRole });
+                                        }
+                                    });
+                                }
+                            }
+                        }
+
+                        Object.keys(this.staffTasks).forEach(k => {
+                            this.staffTasks[k].sort((a, b) => {
+                                let pa = parseTimeStr(a.time);
+                                let pb = parseTimeStr(b.time);
+                                return (pa ? pa.start : 0) - (pb ? pb.start : 0);
+                            });
+                        });
+                        
+                        this.isLoaded = true;
+
+                    } catch (err) {
+                        console.error(err);
+                        this.errorMsg = '⚠ ' + err.message;
+                        this.isLoaded = true;
+                    }
+                }
+            },
+            mounted() {}
+        }).mount('#app');
+    </script>
+</body>
+</html>
