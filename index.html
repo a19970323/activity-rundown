@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>2026電商激勵活動 - 行程檢視</title>
+    <!-- 錯誤偵測 -->
     <script>
         window.onerror = function(msg, url, line) {
             document.body.innerHTML = '<div style="color:red; padding:20px; font-weight:bold; background:#fff;">⚠ 網頁發生錯誤: ' + msg + '<br>請重新整理或檢查網路連線。</div>';
@@ -55,14 +56,13 @@
                 <div class="mt-4 md:mt-0 flex flex-col md:flex-row items-center space-y-3 md:space-y-0 md:space-x-4">
                     <div v-if="errorMsg" class="text-red-500 font-bold text-sm bg-red-100 p-2 rounded">{{ errorMsg }}</div>
                     
-                    <!-- 頂部時間控制區 (針對活動流程) -->
+                    <!-- 時間控制按鈕區 -->
                     <div class="flex items-center space-x-2 bg-gray-100 p-1.5 rounded-lg border border-gray-200">
                         <button @click="resetTime" title="回到真實時間" class="bg-white hover:bg-gray-200 text-gray-700 border border-gray-300 px-3 py-1.5 rounded shadow-sm text-sm font-bold transition flex items-center">
                             <span class="mr-1">↺</span> 恢復
                         </button>
-                        <!-- 改為綁定 fastForwardEvent -->
                         <button @click="fastForwardEvent" title="跳至下一個活動" class="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 px-3 py-1.5 rounded shadow-sm text-sm font-bold transition flex items-center">
-                            <span class="mr-1">▶▶</span> 快轉
+                            <span class="mr-1">▶</span> 快轉
                         </button>
                     </div>
 
@@ -74,7 +74,7 @@
 
                     <!-- 模擬時間輸入 -->
                     <div class="flex flex-col">
-                        <label class="text-[10px] text-gray-500 font-bold mb-0.5">測試模擬時間</label>
+                        <label class="text-[10px] text-gray-500 font-bold mb-0.5">手動設定時間</label>
                         <input type="time" v-model="mockTime" @change="updateTime" class="border border-gray-300 rounded p-1 text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500">
                     </div>
                 </div>
@@ -86,34 +86,37 @@
                     <span class="bg-blue-600 w-2 h-6 mr-2"></span> 一、活動流程表
                 </h2>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- 完成區塊 -->
                     <div class="bg-white rounded-lg shadow overflow-hidden border-t-4 border-gray-400 opacity-80">
-                        <div class="bg-gray-100 p-3 font-bold text-center text-gray-600">完成 (上一個活動)</div>
+                        <div class="bg-gray-100 p-3 font-bold text-center text-gray-600">完成</div>
                         <div class="p-4 space-y-4 max-h-[600px] overflow-y-auto scrollbar-hide">
                             <div v-if="eventsCompleted.length === 0" class="text-gray-400 text-center py-8">無紀錄或尚未有完成項目</div>
                             <div v-for="(ev, idx) in eventsCompleted" :key="'c'+idx" class="border-l-4 border-gray-400 pl-4 py-1">
-                                <div class="text-sm text-gray-500 font-mono">{{ ev.time }}</div>
+                                <div class="text-sm text-gray-500 font-mono">{{ formatTimeText(ev.time) }}</div>
                                 <div class="font-bold text-lg text-gray-700">{{ ev.item }}</div>
                                 <div class="text-sm mt-1 text-gray-500 whitespace-pre-wrap">{{ ev.content }}</div>
                             </div>
                         </div>
                     </div>
+                    <!-- 現在區塊 -->
                     <div class="bg-white rounded-lg shadow-xl overflow-hidden border-t-4 border-green-500 transform md:scale-105 z-10">
-                        <div class="bg-green-100 p-3 font-bold text-center text-green-800 text-lg">現在 (當下活動)</div>
+                        <div class="bg-green-100 p-3 font-bold text-center text-green-800 text-lg">現在</div>
                         <div class="p-4 space-y-4 max-h-[600px] overflow-y-auto scrollbar-hide">
                             <div v-if="eventsCurrent.length === 0" class="text-gray-400 text-center py-8">目前時段無活動</div>
                             <div v-for="(ev, idx) in eventsCurrent" :key="'cur'+idx" class="border-l-4 border-green-500 pl-4 py-2 bg-green-50 rounded-r-lg">
-                                <div class="text-sm text-green-600 font-mono font-bold">{{ ev.time }}</div>
+                                <div class="text-sm text-green-600 font-mono font-bold">{{ formatTimeText(ev.time) }}</div>
                                 <div class="font-bold text-xl text-green-800">{{ ev.item }}</div>
                                 <div class="text-md mt-1 text-green-900 whitespace-pre-wrap">{{ ev.content }}</div>
                             </div>
                         </div>
                     </div>
+                    <!-- 準備區塊 -->
                     <div class="bg-white rounded-lg shadow overflow-hidden border-t-4 border-blue-400">
-                        <div class="bg-blue-50 p-3 font-bold text-center text-blue-700">準備 (下一個活動)</div>
+                        <div class="bg-blue-50 p-3 font-bold text-center text-blue-700">準備</div>
                         <div class="p-4 space-y-4 max-h-[600px] overflow-y-auto scrollbar-hide">
                             <div v-if="eventsUpcoming.length === 0" class="text-gray-400 text-center py-8">已無後續活動</div>
                             <div v-for="(ev, idx) in eventsUpcoming" :key="'u'+idx" class="border-l-4 border-blue-400 pl-4 py-1">
-                                <div class="text-sm text-blue-500 font-mono">{{ ev.time }}</div>
+                                <div class="text-sm text-blue-500 font-mono">{{ formatTimeText(ev.time) }}</div>
                                 <div class="font-bold text-lg text-gray-800">{{ ev.item }}</div>
                                 <div class="text-sm mt-1 text-gray-600 whitespace-pre-wrap">{{ ev.content }}</div>
                             </div>
@@ -125,7 +128,7 @@
             <!-- 二、工作人員執行表 -->
             <div>
                 <h2 class="text-2xl font-bold border-b-2 border-gray-300 pb-2 mb-4 flex items-center">
-                    <span class="bg-purple-600 w-2 h-6 mr-2"></span> 二、工作人員任務表 (顯示當下與即將到來)
+                    <span class="bg-purple-600 w-2 h-6 mr-2"></span> 二、工作人員任務表
                 </h2>
 
                 <div class="flex flex-wrap items-center gap-2 mb-3 bg-white p-3 rounded-lg shadow-sm">
@@ -141,18 +144,17 @@
                     </button>
                 </div>
 
-                <!-- 任務區專屬 - 時間快調按鈕區 (針對人員任務) -->
+                <!-- 任務區專屬 - 時間快調按鈕區 -->
                 <div class="flex flex-wrap justify-between items-center mb-6 bg-white p-3 rounded-lg shadow-sm border border-gray-100">
                     <div class="text-sm font-bold text-gray-500 flex items-center mb-2 md:mb-0">
-                        ⏱️ 人員任務時程快調 <span class="hidden md:inline"> (目前：<span class="text-blue-600">{{ currentTimeString }}</span>)</span>
+                        ⏱️ 目前時間：<span class="text-blue-600 ml-1">{{ currentTimeString }}</span>
                     </div>
                     <div class="flex items-center space-x-2">
                         <button @click="resetTime" title="回到真實時間" class="bg-gray-50 hover:bg-gray-200 text-gray-700 border border-gray-300 px-4 py-1.5 rounded-full shadow-sm text-sm font-bold transition flex items-center">
                             <span class="mr-1">↺</span> 恢復
                         </button>
-                        <!-- 改為綁定 fastForwardTask -->
                         <button @click="fastForwardTask" title="跳至下一個任務" class="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 px-4 py-1.5 rounded-full shadow-sm text-sm font-bold transition flex items-center">
-                            <span class="mr-1">▶▶</span> 快轉任務
+                            <span class="mr-1">▶</span> 快轉任務
                         </button>
                     </div>
                 </div>
@@ -187,7 +189,7 @@
                                                     <span v-if="task.type === 'current'" class="bg-yellow-500 text-white text-[11px] px-1.5 py-0.5 rounded shadow-sm">當下任務</span>
                                                     <span v-else class="bg-gray-400 text-white text-[11px] px-1.5 py-0.5 rounded shadow-sm">下個任務</span>
                                                 </div>
-                                                {{ task.time }}
+                                                {{ formatTimeText(task.time) }}
                                             </div>
                                         </td>
                                         
@@ -219,7 +221,7 @@
                                             <span v-if="task.type === 'current'" class="bg-yellow-500 text-white text-[10px] px-1.5 py-0.5 rounded shadow-sm">當下任務</span>
                                             <span v-else class="bg-gray-400 text-white text-[10px] px-1.5 py-0.5 rounded shadow-sm">下個任務</span>
                                          </div>
-                                         <div class="font-mono font-bold text-slate-800 text-lg">{{ task.time }}</div>
+                                         <div class="font-mono font-bold text-slate-800 text-lg">{{ formatTimeText(task.time) }}</div>
                                      </div>
                                      <div class="text-xs font-bold text-indigo-700 bg-indigo-100 px-2 py-1 rounded mt-1">
                                          📍 {{ task.area }}
@@ -340,6 +342,13 @@
                 }
             },
             methods: {
+                // 將時間字串格式化為 H:mm
+                formatTimeText(timeStr) {
+                    if (!timeStr) return '';
+                    return String(timeStr).replace(/(\d{2})[:：]?(\d{2})/g, (match, h, m) => {
+                        return parseInt(h, 10) + ':' + m;
+                    });
+                },
                 login() {
                     let inputPw = String(this.passwordInput).trim()
                         .replace(/０/g, '0').replace(/１/g, '1')
@@ -371,7 +380,6 @@
                     this.currentMinutes = d.getHours() * 60 + d.getMinutes();
                     this.currentTimeString = d.toLocaleTimeString('zh-TW', { hour12: false });
                 },
-                // 針對「活動流程表」的快轉
                 fastForwardEvent() {
                     let list = this.parsedEventsList;
                     let nextEvent = list.find(ev => ev.parsed.start > this.currentMinutes);
@@ -384,20 +392,16 @@
                         alert('今天已經沒有下一個排定的大會活動囉！');
                     }
                 },
-                // 針對「工作人員任務表」的快轉
                 fastForwardTask() {
                     let allStarts = [];
-                    // 蒐集所有人員任務的時間點
                     for (let staff in this.staffTasks) {
                         for (let t of this.staffTasks[staff]) {
                             let p = parseTimeStr(t.time);
                             if (p) allStarts.push(p.start);
                         }
                     }
-                    // 去除重複時間並由小到大排序
                     allStarts = [...new Set(allStarts)].sort((a, b) => a - b);
                     
-                    // 找出大於目前時間的第一個任務點
                     let nextTaskStart = allStarts.find(time => time > this.currentMinutes);
                     
                     if (nextTaskStart) {
