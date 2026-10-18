@@ -190,7 +190,6 @@
                                  :class="task.type === 'current' ? 'bg-yellow-50 border-yellow-400' : 'bg-white border-gray-300 opacity-90'"
                                  class="border-l-4 rounded-r-lg shadow-sm mb-4 p-4">
                                  
-                                 <!-- 第一列：狀態、時間、區域 -->
                                  <div class="flex justify-between items-start mb-3 border-b border-gray-100 pb-2">
                                      <div>
                                          <div class="mb-1">
@@ -204,13 +203,11 @@
                                      </div>
                                  </div>
                                  
-                                 <!-- 第二列：工作項目 -->
                                  <div class="mb-3">
                                      <div class="text-xs font-bold text-gray-400 mb-1">工作項目</div>
                                      <div class="text-sm font-semibold text-slate-800 whitespace-pre-wrap leading-relaxed">{{ task.task }}</div>
                                  </div>
                                  
-                                 <!-- 第三列：備註 -->
                                  <div v-if="task.note">
                                      <div class="text-xs font-bold text-gray-400 mb-1">備註</div>
                                      <div class="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed bg-white p-2 rounded border border-gray-100">{{ task.note }}</div>
@@ -231,7 +228,7 @@
 
     <script>
         // ==========================================
-        // 🔴 請在這裡設定您的專屬密碼 🔴
+        // 🔴 密碼設定區 🔴
         const EVENT_PASSWORD = "27365925";
         // ==========================================
 
@@ -411,58 +408,40 @@
                                 if(start1 !== -1) break;
                             }
                             if(start1 !== -1) {
+                                let lastTime1 = ''; // 記憶時間，解決合併儲存格
                                 for(let i = start1 + 1; i < json1.length; i++) {
                                     let r = json1[i];
-                                    if(!r || !String(r[tIdx]||'').trim()) continue;
+                                    if(!r) continue;
+                                    
+                                    let rawTime = String(r[tIdx]||'').trim();
+                                    if(rawTime !== '') lastTime1 = rawTime;
+                                    if(lastTime1 === '') continue;
+                                    
+                                    let item = String(r[iIdx]||'').trim();
+                                    let content = String(r[cIdx]||'').trim();
+                                    
+                                    if(item === '' && content === '') continue;
+                                    
                                     this.events.push({
-                                        time: String(r[tIdx]).trim(), item: String(r[iIdx]||'').trim(), content: String(r[cIdx]||'').trim()
+                                        time: lastTime1, item: item, content: content
                                     });
                                 }
                             }
                         }
 
+                        // 修改：加入時間記憶邏輯
                         const sheet2 = workbook.Sheets['rundown-活動日1021'];
                         if (sheet2) {
                             const json2 = XLSX.utils.sheet_to_json(sheet2, { header: 1, defval: '' });
                             let start2 = json2.findIndex(r => r && r.length > 0 && String(r[0]).includes('時間'));
                             if(start2 !== -1) {
+                                let lastTime2 = ''; // 記憶時間，解決合併儲存格
                                 for(let i = start2 + 1; i < json2.length; i++) {
                                     let r = json2[i];
-                                    if(!r || !String(r[0]).trim()) continue;
-                                    let time = String(r[0]).trim();
-                                    let area = String(r[2]).trim();
-                                    let task = String(r[3]).trim();
-                                    let momo = String(r[4]).trim();
-                                    let note = String(r[6]).trim();
-
-                                    ['Jill', 'Dawn', '周瑾', 'Maggie'].forEach(name => {
-                                        if(momo.includes(name) || momo.includes('All')) {
-                                            this.staffTasks[name].push({ time, area, task, note });
-                                        }
-                                    });
-                                }
-                            }
-                        }
-
-                        Object.keys(this.staffTasks).forEach(k => {
-                            this.staffTasks[k].sort((a, b) => {
-                                let pa = parseTimeStr(a.time);
-                                let pb = parseTimeStr(b.time);
-                                return (pa ? pa.start : 0) - (pb ? pb.start : 0);
-                            });
-                        });
-                        
-                        this.isLoaded = true;
-
-                    } catch (err) {
-                        console.error(err);
-                        this.errorMsg = '⚠ ' + err.message;
-                        this.isLoaded = true;
-                    }
-                }
-            },
-            mounted() {}
-        }).mount('#app');
-    </script>
-</body>
-</html>
+                                    if(!r) continue;
+                                    
+                                    let rawTime = String(r[0]||'').trim();
+                                    if(rawTime !== '') lastTime2 = rawTime;
+                                    if(lastTime2 === '') continue;
+                                    
+                                    let area = String(r[2]||'').
