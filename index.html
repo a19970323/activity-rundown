@@ -4,19 +4,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>2026電商激勵活動 - 行程檢視</title>
+    <!-- 加入錯誤偵測，避免白畫面不知所措 -->
+    <script>
+        window.onerror = function(msg, url, line) {
+            document.body.innerHTML = '<div style="color:red; padding:20px; font-weight:bold; background:#fff;">⚠ 網頁發生錯誤: ' + msg + '<br>請重新整理或檢查網路連線。</div>';
+        };
+    </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
     <style>
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-        [v-cloak] { display: none; }
     </style>
 </head>
 <body class="bg-slate-100 text-gray-800 font-sans">
-    <div id="app" v-cloak>
+    <div id="app">
         
-        <!-- 密碼保護門 (未登入時顯示) -->
+        <!-- 1. 密碼保護門 (未登入時顯示) -->
         <div v-if="!isAuthenticated" class="min-h-screen flex items-center justify-center bg-slate-800 p-4">
             <div class="bg-white p-8 rounded-xl shadow-2xl max-w-sm w-full text-center">
                 <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -30,4 +35,38 @@
             </div>
         </div>
 
-        <!-- 載入
+        <!-- 2. 載入中畫面 -->
+        <div v-else-if="!isLoaded" class="flex flex-col justify-center items-center min-h-screen">
+            <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500 mb-4"></div>
+            <div class="text-xl font-bold text-gray-500">檔案讀取中，請稍候...</div>
+        </div>
+
+        <!-- 3. 正式內容畫面 -->
+        <div v-else class="max-w-7xl mx-auto p-4 md:p-8">
+            <!-- 頂部資訊區 -->
+            <div class="flex flex-col md:flex-row justify-between items-center mb-8 bg-white p-6 rounded-lg shadow-md border-l-4 border-blue-600">
+                <h1 class="text-3xl font-bold text-gray-800">2026電商激勵活動 行程看板</h1>
+                
+                <div class="mt-4 md:mt-0 flex flex-col md:flex-row items-center space-y-3 md:space-y-0 md:space-x-4">
+                    <div v-if="errorMsg" class="text-red-500 font-bold text-sm bg-red-100 p-2 rounded">{{ errorMsg }}</div>
+                    
+                    <!-- 時間控制按鈕區 -->
+                    <div class="flex items-center space-x-2 bg-gray-100 p-1.5 rounded-lg border border-gray-200">
+                        <button @click="resetTime" title="回到真實時間" class="bg-white hover:bg-gray-200 text-gray-700 border border-gray-300 px-3 py-1.5 rounded shadow-sm text-sm font-bold transition flex items-center">
+                            <span class="mr-1">↺</span> 恢復
+                        </button>
+                        <button @click="fastForward" title="跳至下一個活動" class="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 px-3 py-1.5 rounded shadow-sm text-sm font-bold transition flex items-center">
+                            <span class="mr-1">▶▶</span> 快轉
+                        </button>
+                    </div>
+
+                    <!-- 當前時間顯示 -->
+                    <div class="flex items-center space-x-2 bg-blue-50 px-4 py-2 rounded border border-blue-100">
+                        <span class="font-bold text-gray-600 text-sm">目前時間:</span>
+                        <span class="text-2xl text-blue-700 font-mono font-bold">{{ currentTimeString }}</span>
+                    </div>
+
+                    <!-- 模擬時間輸入 -->
+                    <div class="flex flex-col">
+                        <label class="text-[10px] text-gray-500 font-bold mb-0.5">測試模擬時間</label>
+                        <input type="time" v-model="mockTime" @change="updateTime" class="border border-gray-300 rounded p-1 text-sm bg-gray-50 focus:ring-2 focus:ring
