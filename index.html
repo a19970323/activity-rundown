@@ -174,7 +174,13 @@
                                         </td>
                                         
                                         <td class="p-3 text-sm font-semibold text-slate-700">{{ task.area }}</td>
-                                        <td class="p-3 text-sm whitespace-pre-wrap text-slate-800 leading-relaxed">{{ task.task }}</td>
+                                        <td class="p-3 text-sm whitespace-pre-wrap text-slate-800 leading-relaxed">
+                                            <!-- 新增：個人專屬任務標籤 -->
+                                            <div v-if="task.specificRole" class="mb-2 inline-block bg-purple-100 text-purple-800 text-[13px] font-bold px-2 py-1 rounded shadow-sm">
+                                                🎯 {{ task.specificRole }}
+                                            </div>
+                                            <div>{{ task.task }}</div>
+                                        </td>
                                         <td class="p-3 text-sm text-gray-500 whitespace-pre-wrap leading-relaxed">{{ task.note }}</td>
                                     </tr>
                                     <tr v-if="getStaffTaskViews(staff).length === 0">
@@ -204,7 +210,11 @@
                                  </div>
                                  
                                  <div class="mb-3">
-                                     <div class="text-xs font-bold text-gray-400 mb-1">工作項目</div>
+                                     <div class="text-xs font-bold text-gray-400 mb-2">工作項目</div>
+                                     <!-- 新增：個人專屬任務標籤 -->
+                                     <div v-if="task.specificRole" class="mb-2 inline-block bg-purple-100 text-purple-800 text-[13px] font-bold px-2 py-1 rounded shadow-sm">
+                                         🎯 {{ task.specificRole }}
+                                     </div>
                                      <div class="text-sm font-semibold text-slate-800 whitespace-pre-wrap leading-relaxed">{{ task.task }}</div>
                                  </div>
                                  
@@ -227,6 +237,11 @@
     </div>
 
     <script>
+        // ==========================================
+        // 🔴 密碼在此設定 🔴
+        const EVENT_PASSWORD = "27365925";
+        // ==========================================
+
         const { createApp } = Vue;
 
         function parseTimeStr(timeStr) {
@@ -244,11 +259,6 @@
         createApp({
             data() {
                 return {
-                    // ==========================================
-                    // 🔴 密碼在此設定 🔴
-                    targetPassword: '27365925', 
-                    // ==========================================
-
                     isAuthenticated: false,
                     passwordInput: '',
                     authError: false,
@@ -315,7 +325,6 @@
             },
             methods: {
                 login() {
-                    // 自動去除頭尾空白，並將手機鍵盤可能打出的全形數字轉換為半形
                     let inputPw = this.passwordInput.trim()
                         .replace(/０/g, '0').replace(/１/g, '1')
                         .replace(/２/g, '2').replace(/３/g, '3')
@@ -323,13 +332,13 @@
                         .replace(/６/g, '6').replace(/７/g, '7')
                         .replace(/８/g, '8').replace(/９/g, '9');
 
-                    if (inputPw === this.targetPassword) {
+                    if (inputPw === EVENT_PASSWORD) {
                         this.isAuthenticated = true;
                         this.authError = false;
                         this.loadData(); 
                     } else {
                         this.authError = true;
-                        this.passwordInput = ''; // 密碼錯誤時自動清空欄位
+                        this.passwordInput = ''; 
                     }
                 },
                 updateTime() {
@@ -460,32 +469,11 @@
 
                                     ['Jill', 'Dawn', '周瑾', 'Maggie'].forEach(name => {
                                         if(momo.includes(name) || momo.includes('All')) {
-                                            this.staffTasks[name].push({ time: lastTime2, area, task, note });
-                                        }
-                                    });
-                                }
-                            }
-                        }
-
-                        Object.keys(this.staffTasks).forEach(k => {
-                            this.staffTasks[k].sort((a, b) => {
-                                let pa = parseTimeStr(a.time);
-                                let pb = parseTimeStr(b.time);
-                                return (pa ? pa.start : 0) - (pb ? pb.start : 0);
-                            });
-                        });
-                        
-                        this.isLoaded = true;
-
-                    } catch (err) {
-                        console.error(err);
-                        this.errorMsg = '⚠ ' + err.message;
-                        this.isLoaded = true;
-                    }
-                }
-            },
-            mounted() {}
-        }).mount('#app');
-    </script>
-</body>
-</html>
+                                            
+                                            // 萃取個人專屬任務文字
+                                            let specificRole = '';
+                                            if (momo.includes('All')) {
+                                                specificRole = '全體協同執行';
+                                            } else {
+                                                let lines = momo.split('\n');
+                                                for (let line of lines) {
