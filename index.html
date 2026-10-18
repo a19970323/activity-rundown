@@ -21,7 +21,7 @@
 <body class="bg-slate-100 text-gray-800 font-sans">
     <div id="app">
         
-        <!-- 1. 密碼保護門 (未登入時顯示) -->
+        <!-- 1. 密碼保護門 -->
         <div v-if="!isAuthenticated" class="min-h-screen flex items-center justify-center bg-slate-800 p-4">
             <div class="bg-white p-8 rounded-xl shadow-2xl max-w-sm w-full text-center">
                 <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -29,7 +29,6 @@
                 </div>
                 <h2 class="text-2xl font-bold text-gray-800 mb-2">專案存取加密</h2>
                 <p class="text-sm text-gray-500 mb-6">請輸入活動專屬密碼以檢視行程表</p>
-                <!-- 按下 Enter 也能登入 -->
                 <input type="password" v-model="passwordInput" @keyup.enter="login" placeholder="請輸入密碼..." class="w-full border border-gray-300 px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4 text-center tracking-widest text-lg font-bold text-blue-700">
                 <button @click="login" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition duration-200 shadow-md">解鎖進入</button>
                 <p v-if="authError" class="text-red-500 text-sm mt-3 font-bold animate-pulse">❌ 密碼錯誤，請重新輸入</p>
@@ -146,7 +145,9 @@
                             <span>🧑‍💻 {{ staff }}</span>
                             <span v-if="pinnedStaff === staff" class="text-xs font-normal text-purple-200 bg-purple-800 px-2 py-1 rounded shadow-inner">已置頂</span>
                         </div>
-                        <div class="overflow-x-auto">
+                        
+                        <!-- 🖥️ 桌面版表格 (螢幕寬度 md 以上顯示) -->
+                        <div class="hidden md:block overflow-x-auto">
                             <table class="w-full text-left border-collapse min-w-[800px]">
                                 <thead>
                                     <tr class="bg-slate-50 text-slate-500">
@@ -182,6 +183,45 @@
                                 </tbody>
                             </table>
                         </div>
+
+                        <!-- 📱 手機版卡片排版 (螢幕寬度 md 以下顯示) -->
+                        <div class="block md:hidden bg-slate-50 p-3">
+                            <div v-for="(task, idx) in getStaffTaskViews(staff)" :key="'mob'+idx" 
+                                 :class="task.type === 'current' ? 'bg-yellow-50 border-yellow-400' : 'bg-white border-gray-300 opacity-90'"
+                                 class="border-l-4 rounded-r-lg shadow-sm mb-4 p-4">
+                                 
+                                 <!-- 第一列：狀態、時間、區域 -->
+                                 <div class="flex justify-between items-start mb-3 border-b border-gray-100 pb-2">
+                                     <div>
+                                         <div class="mb-1">
+                                            <span v-if="task.type === 'current'" class="bg-yellow-500 text-white text-[10px] px-1.5 py-0.5 rounded shadow-sm">當下任務</span>
+                                            <span v-else class="bg-gray-400 text-white text-[10px] px-1.5 py-0.5 rounded shadow-sm">下個任務</span>
+                                         </div>
+                                         <div class="font-mono font-bold text-slate-800 text-lg">{{ task.time }}</div>
+                                     </div>
+                                     <div class="text-xs font-bold text-indigo-700 bg-indigo-100 px-2 py-1 rounded mt-1">
+                                         📍 {{ task.area }}
+                                     </div>
+                                 </div>
+                                 
+                                 <!-- 第二列：工作項目 -->
+                                 <div class="mb-3">
+                                     <div class="text-xs font-bold text-gray-400 mb-1">工作項目</div>
+                                     <div class="text-sm font-semibold text-slate-800 whitespace-pre-wrap leading-relaxed">{{ task.task }}</div>
+                                 </div>
+                                 
+                                 <!-- 第三列：備註 -->
+                                 <div v-if="task.note">
+                                     <div class="text-xs font-bold text-gray-400 mb-1">備註</div>
+                                     <div class="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed bg-white p-2 rounded border border-gray-100">{{ task.note }}</div>
+                                 </div>
+                            </div>
+                            
+                            <div v-if="getStaffTaskViews(staff).length === 0" class="py-6 text-center text-gray-400 text-sm font-medium tracking-wider">
+                                該時段已無排定任務，請待命或稍作休息☕
+                            </div>
+                        </div>
+
                     </div>
                 </div>
             </div>
@@ -278,7 +318,6 @@
             },
             methods: {
                 login() {
-                    // 自動去除頭尾空白，避免誤按空白鍵導致錯誤
                     if (this.passwordInput.trim() === EVENT_PASSWORD) {
                         this.isAuthenticated = true;
                         this.authError = false;
