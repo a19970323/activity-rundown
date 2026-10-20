@@ -61,6 +61,9 @@
                         <button @click="resetTime" title="回到真實時間" class="bg-white hover:bg-gray-200 text-gray-700 border border-gray-300 px-3 py-1.5 rounded shadow-sm text-sm font-bold transition flex items-center">
                             <span class="mr-1">↺</span> 恢復
                         </button>
+                        <button @click="rewindEvent" title="回到上一個活動" class="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 px-3 py-1.5 rounded shadow-sm text-sm font-bold transition flex items-center">
+                            <span class="mr-1">◀</span> 倒退
+                        </button>
                         <button @click="fastForwardEvent" title="跳至下一個活動" class="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 px-3 py-1.5 rounded shadow-sm text-sm font-bold transition flex items-center">
                             <span class="mr-1">▶</span> 快轉
                         </button>
@@ -152,6 +155,9 @@
                     <div class="flex items-center space-x-2">
                         <button @click="resetTime" title="回到真實時間" class="bg-gray-50 hover:bg-gray-200 text-gray-700 border border-gray-300 px-4 py-1.5 rounded-full shadow-sm text-sm font-bold transition flex items-center">
                             <span class="mr-1">↺</span> 恢復
+                        </button>
+                        <button @click="rewindTask" title="回到上一個任務" class="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 px-4 py-1.5 rounded-full shadow-sm text-sm font-bold transition flex items-center">
+                            <span class="mr-1">◀</span> 倒退任務
                         </button>
                         <button @click="fastForwardTask" title="跳至下一個任務" class="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 px-4 py-1.5 rounded-full shadow-sm text-sm font-bold transition flex items-center">
                             <span class="mr-1">▶</span> 快轉任務
@@ -257,7 +263,7 @@
     <script>
         // ==========================================
         // 🔴 密碼唯一判定標準 🔴
-        const EVENT_PASSWORD = ""; 
+        const EVENT_PASSWORD = "27365925"; 
         // ==========================================
 
         const { createApp } = Vue;
@@ -342,7 +348,6 @@
                 }
             },
             methods: {
-                // 將時間字串格式化為 H:mm
                 formatTimeText(timeStr) {
                     if (!timeStr) return '';
                     return String(timeStr).replace(/(\d{2})[:：]?(\d{2})/g, (match, h, m) => {
@@ -392,6 +397,20 @@
                         alert('今天已經沒有下一個排定的大會活動囉！');
                     }
                 },
+                // 新增：倒退至上一個大會活動
+                rewindEvent() {
+                    // 反轉陣列，由近到遠尋找第一個小於當下時間的活動
+                    let list = [...this.parsedEventsList].reverse();
+                    let prevEvent = list.find(ev => ev.parsed.start < this.currentMinutes);
+                    if (prevEvent) {
+                        let h = Math.floor(prevEvent.parsed.start / 60).toString().padStart(2, '0');
+                        let m = (prevEvent.parsed.start % 60).toString().padStart(2, '0');
+                        this.mockTime = `${h}:${m}`;
+                        this.updateTime();
+                    } else {
+                        alert('這已經是今天最早的活動囉！');
+                    }
+                },
                 fastForwardTask() {
                     let allStarts = [];
                     for (let staff in this.staffTasks) {
@@ -411,6 +430,30 @@
                         this.updateTime();
                     } else {
                         alert('今天已經沒有下一個排定的工作人員任務囉！');
+                    }
+                },
+                // 新增：倒退至上一個工作任務
+                rewindTask() {
+                    let allStarts = [];
+                    for (let staff in this.staffTasks) {
+                        for (let t of this.staffTasks[staff]) {
+                            let p = parseTimeStr(t.time);
+                            if (p) allStarts.push(p.start);
+                        }
+                    }
+                    // 排序改為由大到小（時間晚到早）
+                    allStarts = [...new Set(allStarts)].sort((a, b) => b - a);
+                    
+                    // 找出第一個小於當下時間的任務起點
+                    let prevTaskStart = allStarts.find(time => time < this.currentMinutes);
+                    
+                    if (prevTaskStart !== undefined) {
+                        let h = Math.floor(prevTaskStart / 60).toString().padStart(2, '0');
+                        let m = (prevTaskStart % 60).toString().padStart(2, '0');
+                        this.mockTime = `${h}:${m}`;
+                        this.updateTime();
+                    } else {
+                        alert('這已經是今天最早的工作任務囉！');
                     }
                 },
                 resetTime() {
